@@ -42,31 +42,31 @@ jobs:
       - name: Build & Push manufacturing-creator
         run: |
           docker build -f docker-files/Dockerfile.manufacturing-creator \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }} \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:latest \
+            -t ${{ secrets.DOCKER_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/manufacturing-creator:latest \
             .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/manufacturing-creator:latest
 
       # ── Step 5: Build & Push multi-agent-manufacturing ──
       - name: Build & Push multi-agent-manufacturing
         run: |
           docker build -f docker-files/Dockerfile.multi-agent-manufacturing \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }} \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:latest \
+            -t ${{ secrets.DOCKER_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/multi-agent-manufacturing:latest \
             .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/multi-agent-manufacturing:latest
 
       # ── Step 6: Build & Push main-app ──
       - name: Build & Push main-app
         run: |
           docker build -f docker-files/Dockerfile.main-app \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }} \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/main-app:latest \
+            -t ${{ secrets.DOCKER_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKER_USERNAME }}/main-app:latest \
             .
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }}
-          docker push ${{ secrets.DOCKERHUB_USERNAME }}/main-app:latest
+          docker push ${{ secrets.DOCKER_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKER_USERNAME }}/main-app:latest
 
       # ── Step 7: Deploy to EC2 via SSH ──
       - name: Deploy to EC2
@@ -78,13 +78,13 @@ jobs:
           script: |
             # Update all 3 deployments with new image version
             kubectl set image deployment/manufacturing-creator \
-              manufacturing-creator=${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }}
+              manufacturing-creator=${{ secrets.DOCKER_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }}
 
             kubectl set image deployment/multi-agent-manufacturing \
-              multi-agent-manufacturing=${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
+              multi-agent-manufacturing=${{ secrets.DOCKER_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
 
             kubectl set image deployment/main-app \
-              main-app=${{ secrets.DOCKERHUB_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }}
+              main-app=${{ secrets.DOCKER_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }}
 
             # Wait for all rollouts to complete
             kubectl rollout status deployment/manufacturing-creator
