@@ -1,99 +1,97 @@
-name: Marketing Agent CI/CD
+# ============================================================
+#  deploy.yml
+#  GitHub Actions — Build, Push & Deploy to EC2
+#
+#  Triggers: Every push to main branch
+#  Actions:
+#    1. Build all 3 Docker images
+#    2. Push to Docker Hub
+#    3. SSH into EC2 and deploy via kubectl
+# ============================================================
+
+name: Build, Push & Deploy to EC2
 
 on:
   push:
     branches:
       - main
 
-env:
-  IMAGE_TAG: ${{ github.run_number }}
-
 jobs:
-  build-and-push:
-    name: Build & Push Docker Images
+  build-and-deploy:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout Code
-        uses: actions/checkout@v4
 
-      - name: Log in to Docker Hub
+      # ── Step 1: Checkout code ──
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # ── Step 2: Login to Docker Hub ──
+      - name: Login to Docker Hub
         uses: docker/login-action@v3
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
 
-      # 🔹 Build and Push Backend
-      - name: Build and Push Backend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./backend
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/marketing-backend:latest
-            ${{ secrets.DOCKER_USERNAME }}/marketing-backend:${{ env.IMAGE_TAG }}
+      # ── Step 3: Set version tag using commit SHA ──
+      - name: Set image version
+        id: version
+        run: echo "VERSION=$(echo $GITHUB_SHA | cut -c1-7)" >> $GITHUB_OUTPUT
 
-      # 🔹 Build and Push Frontend
-      - name: Build and Push Frontend
-        uses: docker/build-push-action@v5
-        with:
-          context: ./frontend
-          push: true
-          tags: |
-            ${{ secrets.DOCKER_USERNAME }}/marketing-frontend:latest
-            ${{ secrets.DOCKER_USERNAME }}/marketing-frontend:${{ env.IMAGE_TAG }}
+      # ── Step 4: Build & Push manufacturing-creator ──
+      - name: Build & Push manufacturing-creator
+        run: |
+          docker build -f docker-files/Dockerfile.manufacturing-creator \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:latest \
+            .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:latest
 
-  deploy-to-ec2:
-    name: Deploy to EC2 Kubernetes
-    needs: build-and-push
-    runs-on: ubuntu-latest
+      # ── Step 5: Build & Push multi-agent-manufacturing ──
+      - name: Build & Push multi-agent-manufacturing
+        run: |
+          docker build -f docker-files/Dockerfile.multi-agent-manufacturing \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:latest \
+            .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:latest
 
-    steps:
-      - name: Execute Remote SSH Commands
-        uses: appleboy/ssh-action@v1.0.3
-        env:
-          GROQ_KEY: ${{ secrets.GROQ_API_KEY }}
-          OPENROUTER_KEY: ${{ secrets.OPENROUTER_API_KEY }}
-          DB_URL: ${{ secrets.DATABASE_URL }}
-          IMAGE_TAG: ${{ github.run_number }}
-          DOCKER_USER: ${{ secrets.DOCKER_USERNAME }}
+      # ── Step 6: Build & Push main-app ──
+      - name: Build & Push main-app
+        run: |
+          docker build -f docker-files/Dockerfile.main-app \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }} \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/main-app:latest \
+            .
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }}
+          docker push ${{ secrets.DOCKERHUB_USERNAME }}/main-app:latest
+
+      # ── Step 7: Deploy to EC2 via SSH ──
+      - name: Deploy to EC2
+        uses: appleboy/ssh-action@v1.0.0
         with:
           host: ${{ secrets.EC2_HOST }}
-          username: ubuntu
+          username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
-          # ✅ DOCKER_USER added so image names resolve correctly inside script
-          envs: GROQ_KEY,OPENROUTER_KEY,DB_URL,IMAGE_TAG,DOCKER_USER
           script: |
-            cd ~/marketing-planner-agent
-            git pull origin main
+            # Update all 3 deployments with new image version
+            kubectl set image deployment/manufacturing-creator \
+              manufacturing-creator=${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:${{ steps.version.outputs.VERSION }}
 
-            # 🔹 Update ConfigMap
-            kubectl create configmap marketing-config \
-              --from-literal=GROQ_API_KEY="$GROQ_KEY" \
-              --from-literal=OPENROUTER_API_KEY="$OPENROUTER_KEY" \
-              --from-literal=DATABASE_URL="$DB_URL" \
-              --from-literal=VITE_API_URL="/api" \
-              --from-literal=CORS_ORIGINS="*" \
-              --dry-run=client -o yaml | kubectl apply -f -
+            kubectl set image deployment/multi-agent-manufacturing \
+              multi-agent-manufacturing=${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
 
-            # ✅ Apply infra manifests FIRST (mysql, services)
-            kubectl apply -f mysql.yaml
-            kubectl apply -f services.yaml
+            kubectl set image deployment/main-app \
+              main-app=${{ secrets.DOCKERHUB_USERNAME }}/main-app:${{ steps.version.outputs.VERSION }}
 
-            # ✅ Apply deployment AFTER configmap is ready
-            # deployment.yaml should NOT hardcode image tags — use :latest as placeholder
-            kubectl apply -f deployment.yaml
+            # Wait for all rollouts to complete
+            kubectl rollout status deployment/manufacturing-creator
+            kubectl rollout status deployment/multi-agent-manufacturing
+            kubectl rollout status deployment/main-app
 
-            # ✅ Now override with the exact versioned image built in this run
-            # Make sure container names match what's defined in your deployment.yaml
-            kubectl set image deployment/marketing-stack \
-              backend=$DOCKER_USER/marketing-backend:$IMAGE_TAG \
-              frontend=$DOCKER_USER/marketing-frontend:$IMAGE_TAG
-
-            # ✅ Wait for rollout to fully complete
-            kubectl rollout status deployment/marketing-stack --timeout=120s
-
-            echo "================================================"
-            echo " Deployment complete! Version: $IMAGE_TAG"
-            echo "================================================"
-            kubectl get pods -o wide
+            echo "========================================"
+            echo " Deployment complete!"
+            kubectl get pods
+            echo "========================================"
