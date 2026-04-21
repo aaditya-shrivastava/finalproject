@@ -53,7 +53,7 @@ jobs:
         run: |
           docker build -f docker-files/Dockerfile.multi-agent-manufacturing \
             -t ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }} \
-            -t ${{ secrets.DOCKERHUB_USERNAME }}/manufacturing-creator:latest \
+            -t ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:latest \
             .
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:${{ steps.version.outputs.VERSION }}
           docker push ${{ secrets.DOCKERHUB_USERNAME }}/multi-agent-manufacturing:latest
