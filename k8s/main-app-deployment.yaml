@@ -21,8 +21,7 @@ spec:
     spec:
       containers:
         - name: main-app
-          image: dockeruser2004/main-app:1.0.0   # <-- replace username
-          imagePullPolicy: Always
+          image: dockeruser2004/main-app:latest  # <-- replace username
           ports:
             - containerPort: 8502
           envFrom:

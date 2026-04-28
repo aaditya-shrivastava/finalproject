@@ -21,8 +21,7 @@ spec:
     spec:
       containers:
         - name: manufacturing-creator
-          image: dockeruser2004/manufacturing-creator:1.0.0   # <-- replace username
-          imagePullPolicy: Always
+          image: dockeruser2004/manufacturing-creator:latest   # <-- replace username
           ports:
             - containerPort: 8500
           envFrom:

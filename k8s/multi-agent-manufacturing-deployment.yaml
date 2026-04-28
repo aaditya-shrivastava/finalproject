@@ -21,8 +21,7 @@ spec:
     spec:
       containers:
         - name: multi-agent-manufacturing
-          image: dockeruser2004/multi-agent-manufacturing:1.0.0   # <-- replace username
-          imagePullPolicy: Always
+          image: dockeruser2004/multi-agent-manufacturing:latest   # <-- replace username
           ports:
             - containerPort: 8501
           envFrom:
