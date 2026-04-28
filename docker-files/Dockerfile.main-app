@@ -17,6 +17,8 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy only the main app file
 COPY app.py .
 
+COPY k8s/ ./k8s/
+
 EXPOSE 8502
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=15s --retries=3 \
