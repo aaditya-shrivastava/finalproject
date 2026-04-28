@@ -60,13 +60,13 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            cd ~/manufacturing-platform
-            git pull origin main
-            kubectl apply -f k8s/configmap-secrets.yaml
-            kubectl apply -f k8s/manufacturing-creator-deployment.yaml
-            kubectl apply -f k8s/multi-agent-manufacturing-deployment.yaml
-            kubectl apply -f k8s/main-app-deployment.yaml
-            kubectl apply -f k8s/ingress.yaml
-            kubectl rollout restart deployment manufacturing-creator
-            kubectl rollout restart deployment multi-agent-manufacturing
-            kubectl rollout restart deployment main-app
+            eval $(minikube docker-env)
+            docker pull dockeruser2004/main-app:latest
+            docker pull dockeruser2004/manufacturing-creator:latest
+            docker pull dockeruser2004/multi-agent-manufacturing:latest
+            kubectl rollout restart deployment/main-app
+            kubectl rollout restart deployment/manufacturing-creator
+            kubectl rollout restart deployment/multi-agent-manufacturing
+            kubectl rollout status deployment/main-app
+            kubectl rollout status deployment/manufacturing-creator
+            kubectl rollout status deployment/multi-agent-manufacturing
