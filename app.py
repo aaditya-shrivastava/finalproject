@@ -146,6 +146,8 @@
 # """, unsafe_allow_html=True)
 
 
+
+
 import streamlit as st
 
 st.set_page_config(
@@ -167,7 +169,7 @@ html, body, [class*="css"], .stApp {
     font-family: 'Space Grotesk', sans-serif;
 }
 section[data-testid="stSidebar"] { display: none !important; }
-.block-container { padding-top: 0 !important; max-width: 900px !important; padding-left: 1rem !important; padding-right: 1rem !important; }
+.block-container { padding-top: 1rem !important; max-width: 900px !important; padding-left: 1rem !important; padding-right: 1rem !important; }
 
 /* ── Background grid ── */
 .stApp::before {
@@ -209,7 +211,10 @@ section[data-testid="stSidebar"] { display: none !important; }
     align-items: center;
     justify-content: space-between;
     padding: 1.1rem 2rem;
-    border-bottom: 1px solid rgba(255,255,255,0.05);
+    margin-top: 1rem;
+    border: 1px solid rgba(255,255,255,0.05);
+    border-radius: 12px;
+    background: rgba(255,255,255,0.02);
     animation: fade-down 0.5s ease both;
 }
 .nav-logo { font-family: 'Space Mono', monospace; font-size: .8rem; font-weight: 700; color: #fff; letter-spacing: 2px; }
